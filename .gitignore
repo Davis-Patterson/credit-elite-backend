@@ -29,9 +29,6 @@ yarn-error.log*
 package-lock.json
 yarn.lock
 
-# Optional Firebase private keys
-*.json
-
 # Production build directory
 /dist
 /build
