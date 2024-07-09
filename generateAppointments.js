@@ -16,6 +16,14 @@ const generateAppointments = async () => {
     const today = new Date();
     const daysToGenerate = 7;
 
+    const formatTime = (date) => {
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+    };
+
     for (let day = 0; day < daysToGenerate; day++) {
       const date = new Date(today);
       date.setDate(today.getDate() + day);
@@ -26,6 +34,10 @@ const generateAppointments = async () => {
           const appointmentDate = new Date(date);
           appointmentDate.setHours(hour, minute, 0, 0);
 
+          const endAppointmentDate = new Date(
+            appointmentDate.getTime() + slotDuration * 60000
+          );
+
           const existingAppointment = await Appointment.findOne({
             date: appointmentDate,
           });
@@ -33,7 +45,9 @@ const generateAppointments = async () => {
           if (!existingAppointment) {
             const newAppointment = new Appointment({
               date: appointmentDate,
-              timeSlot: `${hour}:${minute === 0 ? '00' : minute}`,
+              timeSlot: `${formatTime(appointmentDate)} - ${formatTime(
+                endAppointmentDate
+              )}`,
               available: true,
             });
 
