@@ -4,6 +4,8 @@ const app = express();
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const cron = require('node-cron');
+const { exec } = require('child_process');
 const AdminUser = require('./models/adminUserModel');
 
 app.use(cors());
@@ -61,6 +63,21 @@ app.delete('/api/appointments/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/appointments', async (req, res) => {
+  try {
+    const result = await Appointment.deleteMany({});
+    res.status(200).send({
+      message: 'All appointments successfully deleted.',
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    res.status(500).send({
+      message: 'An error occurred while deleting all appointments.',
+      error: error,
+    });
+  }
+});
+
 app.patch('/api/appointments/claim/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -88,6 +105,25 @@ app.patch('/api/appointments/claim/:id', async (req, res) => {
     });
   } catch (error) {
     res.status(500).send({ message: 'An error occurred.', error });
+  }
+});
+
+app.delete('/api/appointments/delete/past', async (req, res) => {
+  try {
+    const currentDateTime = new Date();
+    const result = await Appointment.deleteMany({
+      date: { $lt: currentDateTime },
+    });
+
+    res.status(200).send({
+      message: 'Past appointments successfully deleted.',
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    res.status(500).send({
+      message: 'An error occurred while deleting past appointments.',
+      error: error,
+    });
   }
 });
 
@@ -133,7 +169,7 @@ app.post('/api/admin/login', async (req, res) => {
 });
 
 const verifyToken = (req, res, next) => {
-  const token = req.header('Authorization')?.split(' ')[1]; // Bearer TOKEN
+  const token = req.header('Authorization')?.split(' ')[1];
 
   if (!token) return res.status(401).send('Access Denied');
 
@@ -148,6 +184,21 @@ const verifyToken = (req, res, next) => {
 
 app.get('/api/protected-route', verifyToken, (req, res) => {
   res.send('Protected route accessed.');
+});
+
+// Schedule to run the script daily at midnight
+cron.schedule('0 0 * * *', () => {
+  exec('node generateAppointments.js', (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error executing script: ${error.message}`);
+      return;
+    }
+    if (stderr) {
+      console.error(`Script stderr: ${stderr}`);
+      return;
+    }
+    console.log(`Script stdout: ${stdout}`);
+  });
 });
 
 const PORT = process.env.PORT || 3001;
