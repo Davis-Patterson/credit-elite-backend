@@ -228,7 +228,8 @@ const removeOverlappingAppointments = async () => {
 };
 
 // Schedule to run the script daily at midnight
-cron.schedule('0 0 * * *', () => {
+// Schedule to run the script daily at 10am EST (2pm UTC)
+cron.schedule('0 14 * * *', () => {
   exec('node generateAppointments.js', (error, stdout, stderr) => {
     if (error) {
       console.error(`Error executing script: ${error.message}`);
