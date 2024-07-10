@@ -14,7 +14,7 @@ const generateAppointments = async () => {
     const slotDuration = 30; // 30 minutes
 
     const today = new Date();
-    const daysToGenerate = 7;
+    const daysToGenerate = 10;
 
     const formatTime = (date) => {
       return date.toLocaleTimeString('en-US', {
