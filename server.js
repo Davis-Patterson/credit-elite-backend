@@ -227,23 +227,6 @@ const removeOverlappingAppointments = async () => {
   }
 };
 
-// Schedule to run the script daily at 10am EST (2pm UTC)
-cron.schedule('0 14 * * *', () => {
-  exec('node generateAppointments.js', (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error executing script: ${error.message}`);
-      return;
-    }
-    if (stderr) {
-      console.error(`Script stderr: ${stderr}`);
-      return;
-    }
-    console.log(`Script stdout: ${stdout}`);
-    // After generating appointments, remove overlapping ones
-    removeOverlappingAppointments();
-  });
-});
-
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
