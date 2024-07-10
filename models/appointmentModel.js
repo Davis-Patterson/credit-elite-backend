@@ -15,6 +15,14 @@ const appointmentSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  phoneNumber: {
+    type: String,
+    default: '',
+  },
+  message: {
+    type: String,
+    default: '',
+  },
 });
 
 module.exports = mongoose.model('Appointment', appointmentSchema);

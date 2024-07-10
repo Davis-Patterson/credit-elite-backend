@@ -137,7 +137,7 @@ app.delete('/api/appointments', async (req, res) => {
 app.patch('/api/appointments/claim/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { clientName, clientEmail } = req.body;
+    const { clientName, clientEmail, phoneNumber, message } = req.body;
     const appointment = await Appointment.findById(id);
 
     if (!appointment) {
@@ -153,6 +153,8 @@ app.patch('/api/appointments/claim/:id', async (req, res) => {
     appointment.available = false;
     appointment.clientName = clientName;
     appointment.clientEmail = clientEmail;
+    appointment.phoneNumber = phoneNumber;
+    appointment.message = message;
     await appointment.save();
 
     res.status(200).send({
