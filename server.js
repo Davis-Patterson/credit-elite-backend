@@ -21,27 +21,6 @@ mongoose
 
 const Appointment = require('./models/appointmentModel');
 
-// Middleware to detect subdomains
-app.use((req, res, next) => {
-  const host = req.headers.host;
-  const subdomain = host.split('.')[0];
-
-  if (subdomain === 'admin') {
-    req.isAdminSubdomain = true;
-  } else {
-    req.isAdminSubdomain = false;
-  }
-  next();
-});
-
-// Admin routes
-app.use('/api/admin', (req, res, next) => {
-  if (!req.isAdminSubdomain) {
-    return res.status(403).send('Forbidden');
-  }
-  next();
-});
-
 app.post('/api/admin/register', async (req, res) => {
   try {
     const { username, password } = req.body;
