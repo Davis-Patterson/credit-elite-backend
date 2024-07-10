@@ -31,22 +31,26 @@ const generateAppointments = async () => {
 
       for (let hour = startTime; hour < endTime; hour++) {
         for (let minute = 0; minute < 60; minute += slotDuration) {
-          const appointmentDate = new Date(date);
-          appointmentDate.setHours(hour, minute, 0, 0);
+          const appointmentStartDate = new Date(date);
+          appointmentStartDate.setHours(hour, minute, 0, 0);
 
-          const endAppointmentDate = new Date(
-            appointmentDate.getTime() + slotDuration * 60000
+          const appointmentEndDate = new Date(
+            appointmentStartDate.getTime() + slotDuration * 60000
           );
 
-          const existingAppointment = await Appointment.findOne({
-            date: appointmentDate,
+          // Check for overlapping appointments
+          const overlappingAppointment = await Appointment.findOne({
+            date: {
+              $gte: appointmentStartDate,
+              $lt: appointmentEndDate,
+            },
           });
 
-          if (!existingAppointment) {
+          if (!overlappingAppointment) {
             const newAppointment = new Appointment({
-              date: appointmentDate,
-              timeSlot: `${formatTime(appointmentDate)} - ${formatTime(
-                endAppointmentDate
+              date: appointmentStartDate,
+              timeSlot: `${formatTime(appointmentStartDate)} - ${formatTime(
+                appointmentEndDate
               )}`,
               available: true,
             });

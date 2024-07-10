@@ -186,6 +186,50 @@ app.get('/api/protected-route', verifyToken, (req, res) => {
   res.send('Protected route accessed.');
 });
 
+// Function to check for and remove overlapping appointments
+const removeOverlappingAppointments = async () => {
+  try {
+    const appointments = await Appointment.find({});
+    const appointmentsByDate = {};
+
+    // Group appointments by date
+    appointments.forEach((appointment) => {
+      const dateKey = appointment.date.toISOString();
+      if (!appointmentsByDate[dateKey]) {
+        appointmentsByDate[dateKey] = [];
+      }
+      appointmentsByDate[dateKey].push(appointment);
+    });
+
+    // Check for overlapping appointments
+    for (const dateKey in appointmentsByDate) {
+      const dailyAppointments = appointmentsByDate[dateKey];
+      dailyAppointments.sort((a, b) => a.date - b.date);
+
+      for (let i = 0; i < dailyAppointments.length - 1; i++) {
+        const current = dailyAppointments[i];
+        const next = dailyAppointments[i + 1];
+
+        const currentEndTime = new Date(current.date.getTime() + 30 * 60000); // 30 minutes slot duration
+        if (currentEndTime > next.date) {
+          // Overlap detected
+          if (current.available && !next.available) {
+            await Appointment.findByIdAndDelete(current._id);
+          } else if (!current.available && next.available) {
+            await Appointment.findByIdAndDelete(next._id);
+          } else if (current.available && next.available) {
+            await Appointment.findByIdAndDelete(next._id);
+          }
+        }
+      }
+    }
+
+    console.log('Overlapping appointments removed successfully');
+  } catch (error) {
+    console.error('Error removing overlapping appointments:', error);
+  }
+};
+
 // Schedule to run the script daily at midnight
 cron.schedule('0 0 * * *', () => {
   exec('node generateAppointments.js', (error, stdout, stderr) => {
@@ -198,6 +242,8 @@ cron.schedule('0 0 * * *', () => {
       return;
     }
     console.log(`Script stdout: ${stdout}`);
+    // After generating appointments, remove overlapping ones
+    removeOverlappingAppointments();
   });
 });
 
