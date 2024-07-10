@@ -269,3 +269,29 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// Update admin password
+app.patch('/api/admin/update-password', verifyToken, async (req, res) => {
+  try {
+    const { username, newPassword } = req.body;
+
+    if (!username || !newPassword) {
+      return res.status(400).send('Username and new password are required.');
+    }
+
+    const admin = await AdminUser.findOne({ username });
+
+    if (!admin) {
+      return res.status(404).send('Admin not found.');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    admin.password = hashedPassword;
+
+    await admin.save();
+
+    res.status(200).send('Password updated successfully.');
+  } catch (error) {
+    res.status(500).send('An error occurred while updating the password.');
+  }
+});
