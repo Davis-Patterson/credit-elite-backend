@@ -21,10 +21,87 @@ mongoose
 
 const Appointment = require('./models/appointmentModel');
 
-app.get('/', (req, res) => {
-  res.send('Hello World!');
+// Middleware to detect subdomains
+app.use((req, res, next) => {
+  const host = req.headers.host;
+  const subdomain = host.split('.')[0];
+
+  if (subdomain === 'admin') {
+    req.isAdminSubdomain = true;
+  } else {
+    req.isAdminSubdomain = false;
+  }
+  next();
 });
 
+// Admin routes
+app.use('/api/admin', (req, res, next) => {
+  if (!req.isAdminSubdomain) {
+    return res.status(403).send('Forbidden');
+  }
+  next();
+});
+
+app.post('/api/admin/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const newAdmin = new AdminUser({
+      username,
+      password: hashedPassword,
+    });
+
+    await newAdmin.save();
+    res.status(201).send('Admin registered successfully.');
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const admin = await AdminUser.findOne({ username });
+
+    if (!admin) {
+      return res.status(404).send('Admin not found.');
+    }
+
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (!isMatch) {
+      return res.status(400).send('Invalid credentials.');
+    }
+
+    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
+      expiresIn: '1h',
+    });
+
+    res.status(200).json({ token });
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
+const verifyToken = (req, res, next) => {
+  const token = req.header('Authorization')?.split(' ')[1];
+
+  if (!token) return res.status(401).send('Access Denied');
+
+  try {
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    req.admin = verified;
+    next();
+  } catch (error) {
+    res.status(400).send('Invalid Token');
+  }
+};
+
+app.get('/api/protected-route', verifyToken, (req, res) => {
+  res.send('Protected route accessed.');
+});
+
+// Other routes
 app.post('/api/appointments', async (req, res) => {
   try {
     const appointment = new Appointment(req.body);
@@ -125,65 +202,6 @@ app.delete('/api/appointments/delete/past', async (req, res) => {
       error: error,
     });
   }
-});
-
-app.post('/api/admin/register', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    const newAdmin = new AdminUser({
-      username,
-      password: hashedPassword,
-    });
-
-    await newAdmin.save();
-    res.status(201).send('Admin registered successfully.');
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
-
-app.post('/api/admin/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const admin = await AdminUser.findOne({ username });
-
-    if (!admin) {
-      return res.status(404).send('Admin not found.');
-    }
-
-    const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch) {
-      return res.status(400).send('Invalid credentials.');
-    }
-
-    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
-
-    res.status(200).json({ token });
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
-
-const verifyToken = (req, res, next) => {
-  const token = req.header('Authorization')?.split(' ')[1];
-
-  if (!token) return res.status(401).send('Access Denied');
-
-  try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET);
-    req.admin = verified;
-    next();
-  } catch (error) {
-    res.status(400).send('Invalid Token');
-  }
-};
-
-app.get('/api/protected-route', verifyToken, (req, res) => {
-  res.send('Protected route accessed.');
 });
 
 // Function to check for and remove overlapping appointments
