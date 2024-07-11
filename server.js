@@ -83,8 +83,19 @@ app.get('/api/protected-route', verifyToken, (req, res) => {
 // Other routes
 app.post('/api/appointments', async (req, res) => {
   try {
-    const appointment = new Appointment(req.body);
+    let appointmentDate = new Date(req.body.date);
+    appointmentDate.setHours(appointmentDate.getHours() + 5); // Convert EST to UTC (EST+5)
+
+    const appointment = new Appointment({
+      ...req.body,
+      date: appointmentDate,
+    });
+
     await appointment.save();
+
+    // Call the function to remove overlapping appointments
+    await removeOverlappingAppointments();
+
     res.status(201).send(appointment);
   } catch (error) {
     res.status(400).send(error);
@@ -94,7 +105,16 @@ app.post('/api/appointments', async (req, res) => {
 app.get('/api/appointments', async (req, res) => {
   try {
     const appointments = await Appointment.find({});
-    res.status(200).send(appointments);
+    const estAppointments = appointments.map((appointment) => {
+      const utcDate = new Date(appointment.date);
+      const estDate = new Date(utcDate);
+      estDate.setHours(estDate.getHours() - 5); // Convert UTC to EST (UTC-5)
+      return {
+        ...appointment.toObject(),
+        date: estDate,
+      };
+    });
+    res.status(200).send(estAppointments);
   } catch (error) {
     res.status(500).send(error);
   }
@@ -229,11 +249,6 @@ const removeOverlappingAppointments = async () => {
   }
 };
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
 // Update admin password
 app.patch('/api/admin/update-password', verifyToken, async (req, res) => {
   try {
@@ -258,4 +273,9 @@ app.patch('/api/admin/update-password', verifyToken, async (req, res) => {
   } catch (error) {
     res.status(500).send('An error occurred while updating the password.');
   }
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
