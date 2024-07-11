@@ -4,22 +4,19 @@ const app = express();
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const cron = require('node-cron');
-const { exec } = require('child_process');
+const mongoose = require('mongoose');
 const AdminUser = require('./models/adminUserModel');
+const Appointment = require('./models/appointmentModel');
 
 app.use(cors());
 app.use(express.json());
 
-const mongoose = require('mongoose');
 const mongoURI = process.env.MONGO_URI;
 
 mongoose
   .connect(mongoURI)
   .then(() => console.log('MongoDB connection established'))
   .catch((err) => console.error('MongoDB connection error:', err));
-
-const Appointment = require('./models/appointmentModel');
 
 app.post('/api/admin/register', async (req, res) => {
   try {
@@ -80,20 +77,19 @@ app.get('/api/protected-route', verifyToken, (req, res) => {
   res.send('Protected route accessed.');
 });
 
-// Other routes
 app.post('/api/appointments', async (req, res) => {
   try {
     let appointmentDate = new Date(req.body.date);
+    const duration = req.body.duration;
     appointmentDate.setHours(appointmentDate.getHours() + 5); // Convert EST to UTC (EST+5)
 
     const appointment = new Appointment({
-      ...req.body,
       date: appointmentDate,
+      duration: duration,
     });
 
     await appointment.save();
 
-    // Call the function to remove overlapping appointments
     await removeOverlappingAppointments();
 
     res.status(201).send(appointment);
@@ -229,7 +225,9 @@ const removeOverlappingAppointments = async () => {
         const current = dailyAppointments[i];
         const next = dailyAppointments[i + 1];
 
-        const currentEndTime = new Date(current.date.getTime() + 30 * 60000); // 30 minutes slot duration
+        const currentEndTime = new Date(
+          current.date.getTime() + current.duration * 60000
+        ); // Dynamic duration
         if (currentEndTime > next.date) {
           // Overlap detected
           if (current.available && !next.available) {

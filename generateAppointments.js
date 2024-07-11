@@ -16,18 +16,26 @@ const generateAppointments = async () => {
     const today = new Date();
     const daysToGenerate = 10;
 
-    const formatTime = (date) => {
-      return date.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      });
-    };
+    const formatTime = (start, end) => {
+      const startHour = start
+        .toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        })
+        .replace('PM', '')
+        .trim();
 
-    const convertESTtoUTC = (date) => {
-      const utcDate = new Date(date);
-      utcDate.setHours(utcDate.getHours() + 5); // Convert EST to UTC (EST+5)
-      return utcDate;
+      const endHour = end
+        .toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        })
+        .replace('PM', '')
+        .trim();
+
+      return `${startHour} - ${endHour} PM`;
     };
 
     for (let day = 0; day < daysToGenerate; day++) {
