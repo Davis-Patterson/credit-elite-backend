@@ -4,6 +4,12 @@ require('dotenv').config();
 
 const mongoURI = process.env.MONGO_URI;
 
+const convertESTtoUTC = (date) => {
+  const utcDate = new Date(date);
+  utcDate.setHours(utcDate.getHours() + 5); // Convert EST to UTC (EST+5)
+  return utcDate;
+};
+
 const generateAppointments = async () => {
   try {
     await mongoose.connect(mongoURI);
@@ -67,9 +73,7 @@ const generateAppointments = async () => {
           if (!overlappingAppointment) {
             const newAppointment = new Appointment({
               date: appointmentStartDateUTC,
-              timeSlot: `${formatTime(appointmentStartDateEST)} - ${formatTime(
-                appointmentEndDateEST
-              )}`,
+              duration: slotDuration, // Store the duration in minutes
               available: true,
             });
 
