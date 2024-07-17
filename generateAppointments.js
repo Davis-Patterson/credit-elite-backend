@@ -29,19 +29,15 @@ const generateAppointments = async () => {
           minute: '2-digit',
           hour12: true,
         })
-        .replace('PM', '')
-        .trim();
+        .replace(/ (AM|PM)/, '');
 
-      const endHour = end
-        .toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        })
-        .replace('PM', '')
-        .trim();
+      const endHour = end.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
 
-      return `${startHour} - ${endHour} PM`;
+      return `${startHour} - ${endHour}`;
     };
 
     for (let day = 0; day < daysToGenerate; day++) {

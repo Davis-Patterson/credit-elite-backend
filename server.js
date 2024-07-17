@@ -110,7 +110,18 @@ app.get('/api/appointments', async (req, res) => {
         date: estDate,
       };
     });
-    res.status(200).send(estAppointments);
+
+    // Format the appointments to only have one 'PM' for each time slot
+    const formattedAppointments = estAppointments.map((appointment) => {
+      const startHour = new Date(appointment.date);
+      const endHour = new Date(
+        appointment.date.getTime() + appointment.duration * 60000
+      );
+      appointment.formattedTime = formatTime(startHour, endHour);
+      return appointment;
+    });
+
+    res.status(200).send(formattedAppointments);
   } catch (error) {
     res.status(500).send(error);
   }
@@ -277,3 +288,21 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+const formatTime = (start, end) => {
+  const startHour = start
+    .toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+    .replace(/ (AM|PM)/, '');
+
+  const endHour = end.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  return `${startHour} - ${endHour}`;
+};
