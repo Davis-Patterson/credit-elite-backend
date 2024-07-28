@@ -304,5 +304,13 @@ const formatTime = (start, end) => {
     hour12: true,
   });
 
-  return `${startHour} - ${endHour}`;
+  const endPeriod = end
+    .toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+    .split(' ')[1];
+
+  return `${startHour} - ${endHour} ${endPeriod}`;
 };
