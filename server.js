@@ -103,25 +103,20 @@ app.get('/api/appointments', async (req, res) => {
     const appointments = await Appointment.find({});
     const estAppointments = appointments.map((appointment) => {
       const utcDate = new Date(appointment.date);
-      const estDate = new Date(utcDate);
-      estDate.setHours(estDate.getHours() - 5); // Convert UTC to EST (UTC-5)
+      const estDate = new Date(
+        utcDate.toLocaleString('en-US', { timeZone: 'America/New_York' })
+      );
       return {
         ...appointment.toObject(),
         date: estDate,
+        formattedTime: formatTime(
+          estDate,
+          new Date(estDate.getTime() + appointment.duration * 60000)
+        ),
       };
     });
 
-    // Format the appointments to only have one 'PM' for each time slot
-    const formattedAppointments = estAppointments.map((appointment) => {
-      const startHour = new Date(appointment.date);
-      const endHour = new Date(
-        appointment.date.getTime() + appointment.duration * 60000
-      );
-      appointment.formattedTime = formatTime(startHour, endHour);
-      return appointment;
-    });
-
-    res.status(200).send(formattedAppointments);
+    res.status(200).send(estAppointments);
   } catch (error) {
     res.status(500).send(error);
   }
@@ -290,27 +285,19 @@ app.listen(PORT, () => {
 });
 
 const formatTime = (start, end) => {
-  const startHour = start
-    .toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })
-    .replace(/ (AM|PM)/, '');
-
-  const endHour = end.toLocaleTimeString('en-US', {
+  const options = {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  });
+    timeZone: 'America/New_York',
+  };
 
-  const endPeriod = end
-    .toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })
-    .split(' ')[1];
+  const startHour = start
+    .toLocaleTimeString('en-US', options)
+    .replace(/ (AM|PM)/, '');
+  const endHour = end.toLocaleTimeString('en-US', options);
+
+  const endPeriod = end.toLocaleTimeString('en-US', options).split(' ')[1];
 
   return `${startHour} - ${endHour} ${endPeriod}`;
 };
