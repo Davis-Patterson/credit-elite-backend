@@ -5,6 +5,7 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+const moment = require('moment-timezone');
 const AdminUser = require('./models/adminUserModel');
 const Appointment = require('./models/appointmentModel');
 
@@ -79,12 +80,12 @@ app.get('/api/protected-route', verifyToken, (req, res) => {
 
 app.post('/api/appointments', async (req, res) => {
   try {
-    let appointmentDate = new Date(req.body.date);
+    let appointmentDate = moment(req.body.date).tz('America/New_York');
     const duration = req.body.duration;
-    appointmentDate.setHours(appointmentDate.getHours() + 5); // Convert EST to UTC (EST+5)
+    appointmentDate = appointmentDate.utc();
 
     const appointment = new Appointment({
-      date: appointmentDate,
+      date: appointmentDate.toDate(),
       duration: duration,
     });
 
@@ -102,21 +103,18 @@ app.get('/api/appointments', async (req, res) => {
   try {
     const appointments = await Appointment.find({});
     const estAppointments = appointments.map((appointment) => {
-      const utcDate = new Date(appointment.date);
-      const estDate = new Date(utcDate);
-      estDate.setHours(estDate.getHours() - 5); // Convert UTC to EST (UTC-5)
+      const utcDate = moment(appointment.date).utc();
+      const estDate = utcDate.clone().tz('America/New_York');
       return {
         ...appointment.toObject(),
-        date: estDate,
+        date: estDate.toDate(),
       };
     });
 
     // Format the appointments to only have one 'PM' for each time slot
     const formattedAppointments = estAppointments.map((appointment) => {
-      const startHour = new Date(appointment.date);
-      const endHour = new Date(
-        appointment.date.getTime() + appointment.duration * 60000
-      );
+      const startHour = moment(appointment.date);
+      const endHour = startHour.clone().add(appointment.duration, 'minutes');
       appointment.formattedTime = formatTime(startHour, endHour);
       return appointment;
     });
@@ -291,6 +289,7 @@ app.listen(PORT, () => {
 
 const formatTime = (start, end) => {
   const startHour = start
+    .toDate()
     .toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
@@ -298,13 +297,14 @@ const formatTime = (start, end) => {
     })
     .replace(/ (AM|PM)/, '');
 
-  const endHour = end.toLocaleTimeString('en-US', {
+  const endHour = end.toDate().toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
   });
 
   const endPeriod = end
+    .toDate()
     .toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',

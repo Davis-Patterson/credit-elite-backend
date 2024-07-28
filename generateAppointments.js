@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Appointment = require('./models/appointmentModel');
+const moment = require('moment-timezone');
 require('dotenv').config();
 
 const mongoURI = process.env.MONGO_URI;
@@ -9,38 +10,41 @@ const generateAppointments = async () => {
     await mongoose.connect(mongoURI);
     console.log('MongoDB connection established');
 
-    const startTimeUTC = 17; // 12 PM EST in UTC (17:00 UTC)
-    const endTimeUTC = 23; // 6 PM EST in UTC (23:00 UTC)
     const slotDuration = 30; // 30 minutes
-
-    const today = new Date();
     const daysToGenerate = 10;
 
+    const timezone = 'America/New_York'; // EST time zone
+
+    const today = moment().tz(timezone);
+
     for (let day = 0; day < daysToGenerate; day++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + day);
-      date.setHours(0, 0, 0, 0);
+      const date = today.clone().add(day, 'days').startOf('day');
 
-      for (let hour = startTimeUTC; hour < endTimeUTC; hour++) {
+      for (let hour = 12; hour < 18; hour++) {
+        // 12 PM to 6 PM EST
         for (let minute = 0; minute < 60; minute += slotDuration) {
-          const appointmentStartDateUTC = new Date(date);
-          appointmentStartDateUTC.setHours(hour, minute, 0, 0);
+          const appointmentStartDateEST = date
+            .clone()
+            .set({ hour, minute, second: 0, millisecond: 0 });
+          const appointmentStartDateUTC = appointmentStartDateEST
+            .clone()
+            .tz('UTC');
 
-          const appointmentEndDateUTC = new Date(
-            appointmentStartDateUTC.getTime() + slotDuration * 60000
-          );
+          const appointmentEndDateUTC = appointmentStartDateUTC
+            .clone()
+            .add(slotDuration, 'minutes');
 
           // Check for overlapping appointments
           const overlappingAppointment = await Appointment.findOne({
             date: {
-              $gte: appointmentStartDateUTC,
-              $lt: appointmentEndDateUTC,
+              $gte: appointmentStartDateUTC.toDate(),
+              $lt: appointmentEndDateUTC.toDate(),
             },
           });
 
           if (!overlappingAppointment) {
             const newAppointment = new Appointment({
-              date: appointmentStartDateUTC,
+              date: appointmentStartDateUTC.toDate(),
               duration: slotDuration, // Store the duration in minutes
               available: true,
             });
