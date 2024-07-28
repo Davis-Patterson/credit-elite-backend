@@ -203,7 +203,7 @@ app.delete('/api/appointments/delete/past', async (req, res) => {
       deletedCount: result.deletedCount,
     });
   } catch (error) {
-    res.status(500).send({
+    res.status500().send({
       message: 'An error occurred while deleting past appointments.',
       error: error,
     });
