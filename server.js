@@ -99,7 +99,7 @@ app.post('/api/appointments', async (req, res) => {
   }
 });
 
-app.get('/api/appointments', async (req, res) => {
+app.get('/api/appointments', verifyToken, async (req, res) => {
   try {
     const appointments = await Appointment.find({});
     const estAppointments = appointments.map((appointment) => {
@@ -111,7 +111,31 @@ app.get('/api/appointments', async (req, res) => {
       };
     });
 
-    // Format the appointments to only have one 'PM' for each time slot
+    const formattedAppointments = estAppointments.map((appointment) => {
+      const startHour = moment(appointment.date);
+      const endHour = startHour.clone().add(appointment.duration, 'minutes');
+      appointment.formattedTime = formatTime(startHour, endHour);
+      return appointment;
+    });
+
+    res.status(200).send(formattedAppointments);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
+app.get('/api/appointments/available', async (req, res) => {
+  try {
+    const availableAppointments = await Appointment.find({ available: true });
+    const estAppointments = availableAppointments.map((appointment) => {
+      const utcDate = moment(appointment.date).utc();
+      const estDate = utcDate.clone().tz('America/New_York');
+      return {
+        ...appointment.toObject(),
+        date: estDate.toDate(),
+      };
+    });
+
     const formattedAppointments = estAppointments.map((appointment) => {
       const startHour = moment(appointment.date);
       const endHour = startHour.clone().add(appointment.duration, 'minutes');
