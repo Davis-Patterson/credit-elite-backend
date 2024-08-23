@@ -126,7 +126,13 @@ app.get('/api/appointments', verifyToken, async (req, res) => {
 
 app.get('/api/appointments/available', async (req, res) => {
   try {
-    const availableAppointments = await Appointment.find({ available: true });
+    const currentDateTime = moment.tz('America/New_York').add(30, 'minutes');
+
+    const availableAppointments = await Appointment.find({
+      available: true,
+      date: { $gte: currentDateTime.toDate() },
+    });
+
     const estAppointments = availableAppointments.map((appointment) => {
       const utcDate = moment(appointment.date).utc();
       const estDate = utcDate.clone().tz('America/New_York');
